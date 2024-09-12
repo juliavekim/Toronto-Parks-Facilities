@@ -1,0 +1,429 @@
+---
+title: "Racial, but no Income Disparities, Identified in the Distribution of Toronto's Parks and Recreation Facilities Projects" 
+title-block-banner: true
+abstract: "Social inequity in sustainable urban development projects systematically disadvantages certain communities, by limiting access to opportunities, resources, and essential services. This study aims to test the hypothesis that Toronto’s Parks and Recreation Facilities (PRF) projects are unevenly distributed in low-income and high-minority wards. Analysis of current PRF projects and 2021 Census data reveals no significant correlation between the number of projects and the proportion of low-income households per ward. However, a moderately negative correlation exists between the number of projects and the proportion of visible minorities per ward, supporting the hypothesis of a racial disparity in access to sustainability development initiatives across Toronto."
+thanks: "Code and data supporting this analysis is available at: https://github.com/julia-ve-kim/toronto_parks_recreation_facilities"
+author: "Julia Kim"
+date: today
+date-format: long
+format: pdf 
+toc: true
+number-sections: true
+bibliography: references.bib
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+#### Load Packages ####
+library(tidyverse)
+library(knitr)
+library(janitor)
+library(ggplot2)
+library(here)  # for referencing files in directory
+
+#### Load Data ####
+cleaned_facilities_data <- read_csv(
+  file = here("outputs/data/cleaned_facilities_data.csv"),
+  show_col_types = FALSE)
+cleaned_ward_profile_data <- read_csv(
+  file = here("outputs/data/cleaned_ward_profile_data.csv"),
+  show_col_types = FALSE)
+
+# Jumble up rows of cleaned_facilities_dataset to ensure we get a representative 
+# sample for the first 5 rows when we display it 
+set.seed(853)
+cleaned_facilities_data <- 
+  cleaned_facilities_data[sample(nrow(cleaned_facilities_data)), ]
+```
+
+# Introduction
+
+Sustainable urban development is an integrated approach to development, which balances economic growth, environmental protection and social equity interests [@trudeau]. However, social equity --- the idea that the benefits and burdens of social development should be distributed evenly in a community --- has proven to be very difficult to actually implement in sustainable development projects and so is often routinely left out in practice [@Sarmiento]. This is done at the expense of marginalised groups, such as low-income earners and ethnic minorities, for whom such projects are intended to promote their socio-economic development. This discrepancy between theory and practice has been an area of great interest among researchers, who have historically focused on proposing conceptual frameworks to better align theory with practice [@trudeau].
+
+This paper seeks to take a different approach, by examining whether an important category of sustainable development project --- parks and recreations facilities (PRF) --- that are integral to the city of Toronto indeed delivers on its social equity claims. According to Toronto's "PRF Master Plan for 2019-2023" [-@parksandrec], PRF projects are designed to provide an equitable distribution of facilities on a geographic and demographic basis for all residents, thereby ensuring universal access to quality infrastructure and services. This paper scrutinises this claim, by determining whether there exists current inequitable distribution in PRF projects, on the basis of two social factors: high-minority and low-income levels.
+
+Upon analysis of the PRF projects and 2021 Census datasets, a moderately negative and statistically significant correlation between the number of projects and the proportion of racial minorities per ward, supporting the hypothesis that fewer projects occur in high-minority wards. By contrast, no significant relation between the number of projects and the proportion of low-income private households was found. Accordingly, there is some evidence to support a lack of social equity in city-funded sustainable development initiatives based on race / ethnicity, but not on income, in partial contradiction to the universal accessibility claims in the "PRF Master Plan for 2019-2023" [-@parksandrec]. Such racial disparities in project distribution, if observed consistently over time, might lead to important deprivations of facilities in high-minority wards, thereby limiting their access to open spaces, community resources and essential services.
+
+The remainder of this paper is structured, as follows. Section 2 discusses the software used, data sources and methods used to clean the data. Section 3 provides key findings in the data, including trends and correlation between variables of interest. Section 4 discusses the significance and broader impact of these key findings, while acknowledging the limitations of the research. Section 5 provides some concluding remarks about the main results of the investigation and suggests possible avenues for future research.
+
+# Data
+
+Datasets `Parks and Recreation Facilties Projects` [@TorontoFacilitiesData] and `Ward Profiles (25-Ward Model)` [@TorontoWardData] were imported from the Open Data Toronto Portal via the `opendatatoronto` library [@OpenDataToronto]. Data were cleaned and analysed using the statistical programming language R [@R]. In-built functionalities from the `tidyverse` [@Tidyverse] package were used for data manipulation, `janitor` [@Janitor] for cleaning, `knitr` [@Knitr] for formatting and `here` [@Here] for managing file paths. Packages `ggplot2` [@GGplot2] and `kableExtra` [@KableExtra] were used to generate tables and graphs. More discussion as to data collection, cleaning and analysis can be found further on in this paper.
+
+## Parks and Recreation Facilities Projects
+
+This dataset, published by Toronto Forestry, Parks & Recreation, contains information of city-funded projects, which build or improve parks and recreation centres across Toronto. Data are refreshed on a weekly basis to feature projects that are in-progress or that have been recently completed in the last three to six months, but to exclude any planned projects that have not yet been initiated. At the time of the analysis, on January 19, 2024, the dataset features 120 recorded projects, including their name, address, types and image URL, together with the name and number of the ward in which they are taking place. Here, by project type is meant one of these five categories: 'New Park', 'New Community Recreation Centre' , 'Master Plan or Study', 'Park or Facility Improvements' and 'Playground Improvements'. According to the City of Toronto [-@PRFdef], the definitions for each of these categories is sufficiently self-explanatory: by
+
+-   'New Park' is meant building a new public green space, equipped with such features as playgrounds, benches and accessible paths,
+
+-   'New Community Recreation Centre' is meant building a new integrated and multi-component facility, equipped with community and activity spaces,
+
+-   'Master Plan or Study' is meant a comprehensive study that outlines a vision to guide change and investment for a public facility over the long-term,
+
+-   'Park or Facility Improvements' and 'Playground Improvements' is meant redesigning or refurbishing an existing park, facility or playground using community feedback, such as building repairs and adding new accessible equipment.
+
+A few steps are made to simplify the analysis. First, 'New Community Recreation Centre' and 'Master Plan or Study' are abbreviated to 'New Rec. Centre' and 'Master Plan', respectively. Second, 'Park or Facility Improvements' and 'Playground Improvements' are merged together to create a representative class called 'Facility Upgrade.' Third, the ward name and number are kept in favour of more precise or descriptive location indicators, such as street addresses or image URL. A sample of the cleaned dataset is shown in @tbl-cleaned_facilities_data. The full dataset is shown in @fig-cleaned_facilities_graph, which displays the distribution of the number and type of PRF projects per ward.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+#| label: tbl-cleaned_facilities_data
+#| tbl-cap: Sample of cleaned PRF data 
+# display first five rows of the cleaned facilities dataset 
+head(cleaned_facilities_data, 5) |>
+  knitr::kable(
+    align = "lll",
+    col.names = c("Ward Name", "Ward Number", "Project Type"),
+    booktabs = TRUE,
+    escape = FALSE,
+    ) 
+```
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+#| label: fig-cleaned_facilities_graph
+#| fig-cap: Number and type of PRF projects per ward in Toronto 
+# make a stacked bar graph of the number of projects per ward, coloured by project type
+# code referenced from https://github.com/christina-wei/INF3104-1-Covid-Clinics/blob/main/outputs/paper/covid_clinics.qmd 
+cleaned_facilities_data |>
+  ggplot(aes(x = paste(sprintf("%02d", ward_number), "-", ward_name), fill =
+               project_type)) + 
+  geom_bar() + # make a bar graph 
+  theme_minimal() + 
+  theme( 
+    axis.text.x = element_text(angle=90, size = 6), # rotate x-axis, adjust font
+    plot.title = element_text(hjust = 0.5),  # center the title 
+    legend.position = c(0.87, 0.8), # adjust legend position 
+    legend.key.size = unit(0.3, "cm"),  # adjust legend key size
+    legend.title = element_text(size = 10),  # adjust legend title font size
+    legend.box.background = element_rect(element_rect(color = "white"), 
+                                         fill = alpha("white", 0.7))  
+    # add white background behind legend box
+  ) +
+  labs(
+    title = "Number of PRF Projects per Ward",
+    x = "Ward",
+    y = "Number of PRF Projects",
+    fill = NULL # get rid of legend title to make more space available
+  ) 
+```
+
+An issue in this dataset is that it contains a *non-exhaustive* list of state of good repair (SGR) projects, defined as projects that address past deferred maintenance or replace systems that have surpassed their useful life [@Cevallos]. This lack of SGR representation may be a source of bias, that would inaccurately portray the distribution of facilities among wards. However, it is known that the city's past levels of investment in maintaining its parks and recreation facilities in a good state of repair have been inadequate and inconsistent, leading to a substantial backlog in such initiatives [@parksandrec]. As of 2017, this Plan reports funding levels to be insufficient for any meaningful implementation of SGR projects. With much of the city's development budget tied in upgrading or constructing new facilities, whose projects *are* supposed to be exhaustively included in the dataset, potential missing observations on ongoing SGR projects are thus not expected to significantly impact the conclusions of this research.
+
+## Ward Profiles (25-Ward Model)
+
+The Ward Profiles data, published by City Planning, contains census data on the demographic, social and economic composition of each of the 25 municipal voting wards in Toronto. These data were collected from the 2021, 2016 and 2011 Censuses of Population and are refreshed on Open Data Toronto as they are made available. At the time of the analysis, the last update was made on January 3, 2024.
+
+The Ward Profiles is downloadable as an `xlsx` file with multiple tabs, of which only the `2021 One Variable` is relevant. It contains 2021 Census of Population data, giving counts of the population, visible minority population and private households with low-income status per ward. A sample of the cleaned dataset is shown in @tbl-cleaned_wards_data below. The full dataset is shown in @fig-cleaned_wards_graph, which displays the total population, together with the visible minority and low-income populations per ward.
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+#| label: tbl-cleaned_wards_data
+#| tbl-cap: Sample of cleaned wards data 
+# display first five rows of the cleaned wards dataset 
+head(cleaned_ward_profile_data, 5) |>
+  knitr::kable(
+    align = "llll",
+    col.names = c("Ward Number", "Total Pop.", "Visible Minority Pop.", 
+                  "Low Income Pop." ),
+    booktabs = TRUE,
+    escape = FALSE
+  ) 
+```
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+#| label: fig-cleaned_wards_graph
+#| fig-cap: Population, visible minority and low-income population per ward in Toronto 
+#### Make a stacked bar graph of the number of projects per ward, coloured by project type ####
+# pivot cleaned_ward_profile_data to long format 
+cleaned_ward_profile_data_long <- pivot_longer(cleaned_ward_profile_data, cols = -ward_number, names_to = "population_type", values_to = "value")
+
+# select relevant columns and rename population_type values
+cleaned_ward_profile_data_long <- cleaned_ward_profile_data_long |> 
+  select(ward_number, value, population_type) |>
+  mutate(
+    population_type = case_when(
+      population_type == "population" ~ "pop.",
+      population_type == "minority_population" ~ "minority pop.",
+      population_type == "low_income_population" ~ "low income pop."
+    )
+  )
+
+# plot the data 
+cleaned_ward_profile_data_long |>
+  ggplot(aes(x = factor(ward_number), y= value, fill = population_type)) + 
+  geom_bar(stat = "identity") + # make a bar graph 
+  theme_minimal() + 
+  theme( 
+    plot.title = element_text(hjust = 0.5),  # center the title 
+    legend.position = c(0.85, 0.2), # adjust legend position 
+    legend.key.size = unit(0.3, "cm"),  # adjust legend key size
+    legend.title = element_text(size = 10),  # adjust legend title font size
+    legend.box.background = element_rect(color = "white", 
+                                         fill = alpha("white", 0.7))  
+    # add white background behind legend box
+  ) +
+  labs(
+    title = "Pop., Visible Minority Pop. and Low-Income Pop. per Ward",
+    x = "Ward",
+    y = "Population Count",
+    fill = NULL # get rid of legend title to make more space available
+  ) 
+```
+
+Note that in the table and figure above, 'population' is abbreviated to 'pop', with 'visible minority pop.' makes count of the number of persons, other than Indigenous peoples, who are either non-Caucasian in race or non-white in colour [@StatCan]. 'Low-income pop.' makes count of the number of private households whose income falls below 50% of the national household median income [@StatCan2]. In this context, a private household designates a person or group thereof who live together, having no other usual place of residence in Canada or abroad [@StatCan3]. Again, the lack of representation of other types of households, of which there are collective households and households abroad, with low-income may introduce error in this investigation. However, it is the established convention of Statistics Canada that all census products be done for private households only [@StatCan3], so it sensible to follow their reasoning and adopt the same convention here.
+
+## Merging Data
+
+@tbl-merged_datasets summarises the information contained in the two datasets most relevant to the analysis. For each ward, it shows the distribution of each project type and the proportions of populations who are visible minorities or in private households of low-income.
+
+In this Table, notice that 'Recreation' is abbreviated to 'Rec.', 'Master Plan or Study' to 'Master Plan' and the counts for 'Park or Facility Improvements' and 'Playground Improvements' have been merged together to create a new project type called 'Facility Upgrade.' Notice also that 'population percentage' of visible minorities and low-income private households are obtained by respectively dividing the total population of visible minorities and low-income private households by the total population in each ward.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+#### Create summary dataset that merges relevant information from both datasets #### 
+# get number of project types per ward 
+ward_projects <-
+  cleaned_facilities_data |>
+  group_by(ward_number, ward_name) |>
+  summarize(
+    "num_new_park" = sum(project_type == "New Park"),
+    "num_new_rec_centre" = sum(project_type == "New Community Recreation Centre"),
+    "num_master_plan" = sum(project_type == "Master Plan or Study"), 
+    "num_facility_upgrade" = sum(project_type == "Park or Facility Improvements" | 
+                                        project_type == "Playground Improvements"),
+         ) 
+
+# compute proportions of visible minority and low income populations 
+ward_profiles <-
+  cleaned_ward_profile_data |>
+  mutate(
+    visible_minority_percentage = round(minority_population / population * 100, 2),
+    low_income_percentage = round(low_income_population / population * 100, 2)  
+  ) |> #delete unnecessary columns
+  select(-population, -minority_population, -low_income_population) 
+
+# merge data together by ward number 
+merged_project_profiles <- ward_projects |> 
+  left_join(ward_profiles, by = "ward_number") 
+```
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+#| label: tbl-merged_datasets
+#| tbl-cap: Project types, visible minority and low-income proportions per ward 
+
+#### Load packages ####
+library(kableExtra)
+
+#### Make a table of merged_project_profiles ####
+# code referenced from https://github.com/EthanSansom/torontocitytrees/blob/main/outputs/paper/paper.Rmd 
+merged_project_profiles |>
+  kable(
+    align = "cccccccc",
+    col.names = c("Code", "Name", "New Park", "New Rec. Centre", "Master Plan", 
+                  "Facility Upgrade", "Visible Minority", "Low-Income"),
+    booktabs = TRUE,
+    escape = FALSE
+    ) |> 
+  add_header_above( # add column headers
+    c("Ward" = 2, "Number of Projects" = 4, "Population Percentage" = 2), align = "c"
+    ) |>
+  column_spec(1, width = "2.5em") |> # adjust column widths for readability 
+  column_spec(2, width = "9.8em") |> 
+  column_spec(c(3:8), width = rep("4em", 7)) |> 
+  kable_styling(font_size=10, position = "center") # centre kable 
+```
+
+# Results
+
+## Parks and Recreation Facilities Project Statistics
+
+At the time of the analysis, there are 210 Parks and Recreation Facilities projects in Toronto, 58 of are building new parks, 9 of which are building new community recreation centres, 19 of which are developing master plans and 124 of which are upgrading facilities (including parks, recreation facilities and playgrounds). In using the 25-Ward model, the mean number of projects per ward can be calculated to be 8.4 with a standard deviation of 3.8. The five wards in which the greatest number of projects are taking place are Spadina-Fort York, Toronto Centre, Etobicoke-Lakeshore, Etobicoke Centre and Eglinton-Lawrence with 16, 15, 14, 13 and 13 projects, respectively. Conversely, the five wards with the least number of projects are Scarborough North, Scarborough Centre, Humber-River Black-Creek, Toronto-Danforth and Etobicoke North with 5, 5, 5, 3 and 2 projects, respectively.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+# tally up total number of each type of project 
+project_counts <- cleaned_facilities_data |>
+  group_by(project_type) |> 
+  count()
+
+# calculate mean and std of number of projects 
+ward_projects_summary <- cleaned_facilities_data |>
+  group_by(ward_number, ward_name) |>
+  summarise(num_projects = n())
+
+mean_ward_projects <- round(mean(ward_projects_summary$num_projects), 2)
+sd_ward_projects <- round(sd(ward_projects_summary$num_projects), 2) 
+
+# determine top 5 wards with largest number of projects
+top_5_wards <- ward_projects_summary |>
+  arrange(desc(num_projects)) |> 
+  head(5)
+
+# determine top 5 wards with lowest number of projects 
+bottom_5_wards <- ward_projects_summary |>
+  arrange(num_projects) |> 
+  head(5)
+```
+
+## Ward Profile Census Statistics
+
+According to the 2021 Census of Population, visible minorities occupy, on average, 56.1% of the population of each ward, with a standard deviation of 19.6%. The five wards with the largest proportion of visible minorities are Scarborough North, Scarborough-Agincourt, Etobicoke North, Humber River-Black Creek and Scarborough-Guildwood, with proportions of 92.18%, 82.31%, 78.29%, 78.21% and 76.42%, respectively. Conversely, the five wards with the least proportion of visible minorities are Etobicoke-Lakeshore, Toronto-Danforth, Davenport, Etobicoke Centre and Parkdale-High Park, with proportions of 34.79%, 34.25% 33.62%, 31.75% and 29.07%, respectively.
+
+On the other hand, persons with low-income status represent, on average, 13.2% of the population of each ward, with a small standard deviation of 3.0%. The five wards with the largest proportion of persons with low-income status are Toronto Centre, Willowdale, University-Rosedale, Humber River-Black Creek and York South-Weston, with proportions of 22.24%, 17.84%, 15.28%, 15.10% and 14.7%. Conversely, the five wards with the least proportion of persons with low-income status are Etobicoke-Lakeshore, Davenport, Eglinton-Lawrence, Etobicoke Centre and Scarborough-Rouge Park, with proportions of 11.00%, 10.84%, 10.15%, 7.86% and 7.77%.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+# calculate the mean and standard deviation of minority percentages across ward.
+mean_minority_percentage <- round(mean(ward_profiles$visible_minority_percentage), 2)
+sd_minority_percentage <- round(sd(ward_profiles$visible_minority_percentage), 2) 
+
+# determine top 5 wards with largest minority percentages 
+top_5_minority <- ward_profiles |>
+  arrange(desc(visible_minority_percentage)) |> 
+  slice_head(n = 5)
+
+# determine top 5 wards with least minority percentages 
+bottom_5_minority <- ward_profiles |>
+  arrange(visible_minority_percentage) |> 
+  slice_head(n = 5)
+
+# calculate mean and std deviation of low-income household percentages across wards
+mean_low_income_percentage <- round(mean(ward_profiles$low_income_percentage), 2)
+sd_low_income_percentage <- round(sd(ward_profiles$low_income_percentage), 2) 
+
+# determine top 5 wards with largest minority percentages 
+top_5_income <- ward_profiles |>
+  arrange(desc(low_income_percentage)) |> 
+  slice_head(n = 5)
+
+# determine top 5 wards with least minority percentages 
+bottom_5_minority <- ward_profiles |>
+  arrange(low_income_percentage) |> 
+  slice_head(n = 5)
+```
+
+## Distribution of Projects in High-Minority Wards
+
+To determine whether a relationship between the number of projects and high-minority wards exists, linear regression is performed on the two variables, as shown in @fig-minority_plot. Linear regression is defined as a method to model the relationship between two variables by fitting a linear equation through the data [@Yale]. In attempting to fit such a line, it is found that the line of best fit --- the one that minimises the sum of the squares of the vertical deviations from each point to the line [@Yale] --- is given by
+
+$$
+y = (13 \pm 2) + (-0.08 \pm 0.04)x, \tag{1}
+$$
+
+where $y$ denotes the number of projects and $x$ the proportion of visible minorities by ward. There is a moderately negative correlation coefficient between the two variables of $-0.402$, whereby the two variables tend to move in opposite directions. To ascertain whether this correlation coefficient is statistically significant or merely the result of random chance, the associated $p$-value is computed. It represents the probability of obtaining a coefficient as equally or more extreme than the one observed, assuming that the true correlation coefficient is $0$ (an assertion termed the 'null hypothesis', $H_0$) [@JMP]. Certainly, a very low $p$-value would mean that the coefficient is unlikely to have occurred under $H_0$, implying it should be rejected in favour of the 'alternative hypothesis', $H_a$\-- that the true correlation coefficient is indeed different to $0$. The threshold for rejecting the null hypothesis is called the significance level $\alpha$, often taken to be $0.05$. Here, the associated $p$-value for the linear model is $0.046$, which is slightly less than $\alpha = 0.05$, so $H_0$ can be rejected. In other words, this inverse relationship between the two variables can be stated to indeed be statistically significant.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+# Add total project count column to merged_project_profiles
+merged_project_profiles <- merged_project_profiles |> 
+  mutate(total_num = num_new_park + num_new_rec_centre + num_master_plan + num_facility_upgrade)
+
+# Fit linear regression model
+model <- lm(total_num ~ visible_minority_percentage, data = merged_project_profiles)
+
+# Calculate correlation between total_num and visible_minority_percentage
+correlation <- cor(
+  merged_project_profiles$total_num,
+  merged_project_profiles$visible_minority_percentage
+)
+```
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+#| label: fig-minority_plot
+#| fig-cap: Relation between number of projects and visible minorities proportion per ward. The grey region around the line of best fit represents the 95% confidence interval, denoting the space where the true line of best fit falls with 95% probability [@StatsExcel].
+# create ggplot
+ggplot(
+  data = merged_project_profiles,
+  aes(x = visible_minority_percentage, y = total_num, label = ward_number)
+) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +  
+  labs(
+    x = "Visible Minority Proportion (%)",
+    y = "Number of Projects",
+    title = "Number of Projects vs Proportion of Visible Minorities by Ward",
+    label = "Ward Number"
+  ) + 
+  theme_minimal() + 
+  geom_text(
+    aes(
+      label = paste(
+        "y =", sprintf("%.2f", coef(model)[1]), 
+        sprintf("%.2f", coef(model)[2]), "*x",
+        "\np-value =", sprintf("%.3f", summary(model)$coefficients[2, 4]),
+        "\ncorrelation =", sprintf("%.3f", correlation)
+      )
+    ),
+    x = 70, 
+    y = max(merged_project_profiles$total_num) * 0.85, 
+    hjust = 0, 
+    vjust = 0, 
+    size = 3, 
+    color = "darkred"
+  ) + 
+  theme(
+    plot.title = element_text(size = 12)  
+  )
+```
+
+## Distribution of Projects in Low-Income Wards
+
+To compare the number of projects with the proportion of low-income households per ward, linear regression is again performed on these two variables, as shown in @fig-income_plot. The line of best fit is given by
+
+$$
+y = (0.2 \pm 0.3) + (5 \pm 3)x, \tag{2}
+$$
+
+where $y$ denotes the number of projects and $x$ the proportion of low-income earners by ward. Here, very weak positive correlation coefficient $\rho = 0.17$ between the two variables of is found, whereby both variables very weakly tend to change in the same direction. However, the associated $p$-value is high at $0.42$, so *no* sufficient evidence exists to conclude that such a correlation is indeed statistically significant.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+# fit linear regression model
+model2 <- lm(total_num ~ low_income_percentage, data = merged_project_profiles)
+
+# calculate the correlation between total_num and visible_minority_percentage
+correlation <- cor(merged_project_profiles$total_num, merged_project_profiles$low_income_percentage)
+```
+
+```{r echo= FALSE, message = FALSE, warning = FALSE}
+#| label: fig-income_plot
+#| fig-cap: Relation between number of projects and proportion of low income household proportion per ward. The grey region represents the 95% confidence interval. 
+# create ggplot
+merged_project_profiles |>
+  ggplot(aes(x = low_income_percentage, y = total_num, label = ward_number)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  labs(
+    x = "Low-income earners proportion (%)",
+    y = "Number of projects",
+    title = "Number of Projects vs Proportion of Low-Income Earners by Ward",
+    label = "Ward Number"
+  ) +
+  theme_minimal() +
+  geom_text(
+    aes(
+      label = paste(
+        "y =", sprintf("%.2f", coef(model2)[1]), "+",
+        sprintf("%.2f", coef(model2)[2]), "*x",
+        "\np-value =", sprintf("%.3f", summary(model2)$coefficients[2, 4]),
+        "\ncorrelation =", sprintf("%.3f", correlation)
+      )
+    ),
+    x = 18,
+    y = max(merged_project_profiles$total_num) * 0.85,
+    hjust = 0,
+    vjust = 0,
+    size = 3,
+    color = "darkred"
+  ) +
+  theme(
+    plot.title = element_text(size = 12)  # adjust title font size
+  )
+```
+
+# Discussion
+
+There is a moderately strong negative relationship between the number of projects and the proportion of visible minorities by ward, whereby fewer projects occur in high-minority wards. Present findings are consistent with previous studies [see, e.g., Moore -@Moore; and -@Pinault for details] that found lower availability of recreational resources and green spaces in high-minority areas. The relative lack of development projects in high-minority wards has the potential to widen the existing infrastructure gap between low- and high-minority areas [@Nicoletti], by reducing access to parks and recreation facilities and speeding up the decline in the safety and quality of existing infrastructure. For the city of Toronto to meet its racial equity objectives, as outlined in its "PRF Master Plan for 2019-2023" [-@parksandrec], a reasonable policy goal would be to redirect sustainable development funding to high-minority wards. Strategies like these would help to mitigate racial disparities in the city of Toronto.
+
+By contrast, the paper found no significant relationship between the number of facilities projects and the proportion of low-income private households by ward. This finding is consistent with at least two studies [see, e.g., Abercrombie et al. -@Abercrombie; and Mckenzie et al. -@McKenzie] that found no correlation between the number of community centre facilities and neighbourhood income. Interestingly, the study by Abercrombie et al. [-@Abercrombie] found instead the *quality* of such facilities to be positively correlated to income; to verify this result can represent a valuable direction for future research. This finding shows that the city of Toronto fulfills its social equity objectives in part, by distributing its sustainable development projects without correlation to the income of its earners.
+
+However, there are potential weaknesses in the datasets used in this analysis. First, the PRF Projects dataset contains only a small and non-exhaustive number (\$n = 210\$) of projects that are in-progress or have been recently completed. It excludes any planned projects that have not yet been initiated and a subset of SGR projects, both of which may be important factors to assess the true distribution of projects across wards. There are also potential measurement errors in the 2021 Census of Population, as described in Chapter 9 of the "Guide to the Census of Population" \[-\@CensusQuality\]. Of the main types of errors reported in the Guide \[-\@CensusQuality\], the most relevant to the data subset used in this report are 'non-response errors', where some information about a respondent is missing, 'response errors' where a question is misunderstood by a respondent and 'processing errors' when information is entered incorrectly into the system during data capture.
+
+There are also important limitations to this analysis. As the PRF projects dataset is refreshed on a weekly basis, the analysis described in this report is limited by its being able to only provide insights specific to the initial dataset. In other words, the analysis is not able to capture changes in the underlying dynamics of the data, with no assessment performed to determine how frequently they occur. There is also a temporal 'lag' between the projects data, last updated at the time of this report on January 3, 2024, and the census data, collected in 2021. It is therefore possible that the census data may no longer accurately capture current demographic, ethnocultural and socioeconomic conditions in wards across the city of Toronto. Lastly, this report seeks to assess whether the city of Toronto is currently fulfilling its social equity objectives, as laid out in its "PRF Master Plan for 2019 to 2023" that was expressly written for the years 2019 to 2023. At the time of this report, it is not currently known whether the City of Toronto is intending to change its social equity objectives for the years 2024 and onwards to better match its vision with its current situation.
+
+# Conclusion
+
+This paper investigates the current distribution of PRF Projects across the City of Toronto to assess whether inequitable distribution occurs on the basis of two social factors: high-minority and low-income levels. Analysis showed a significant, moderately negative correlation between the number of projects and the proportion of minorities in wards, but no significant relation between the number of projects and the proportion of low-income private households. As such, there is some evidence to support inequity in city-funded sustainable development initiatives on the basis of race / ethnicity, but not that of income, in partial fulfillment of the social equity goals in "Toronto PRF Master Plan for 2019-2023" \[-\@parksandrec\]. Future studies could extend this investigation by determining whether the quality, rather than the quantity, of projects has any correlation with ward income, as demonstrated in the study by Abercrombie et al. [-@Abercrombie]. They could also benefit by investigating past records of PFP project distribution in order to assess whether the findings in this paper are consistent over time or to identify any potential trends in their allocation. It would also be valuable to compare the number of PFP projects with other important socioeconomic metrics, such as the number of Indigenous, immigrants or persons with disabilities per ward. Exploring these factors would help to provide a more comprehensive understanding of whether the city of Toronto is delivering on its social equity objectives for sustainable development projects.
+
+# References
